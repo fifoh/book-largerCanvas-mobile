@@ -27,6 +27,8 @@ let mainRectPadding;
 let checkbox;
 let prevSliderValue = 0;
 
+let randomButton;
+
 let rows = 6;
 const cols = 32;
 
@@ -448,22 +450,27 @@ function setup() {
   initializeGridArray();
   playButton = createImg('images/play_icon.jpg', '▶');
   playButton.size(45, 45); 
-  playButton.position(10, 30);
+  playButton.position(10, 10);
   playButton.touchStarted(() => toggleAnimation(totalAnimationTime));
 
   stopButton = createImg('images/stop_icon.jpg', '▶');
   stopButton.size(45, 45); 
-  stopButton.position(10, 30);
+  stopButton.position(10, 10);
   stopButton.touchStarted(stopAnimation).hide();
 
   clearButton = createImg('images/bin_icon.jpg', '✖');
   clearButton.size(45, 45);
   clearButton.touchStarted(clearGrid);
-  clearButton.position(windowWidth - 50, 30);  
+  clearButton.position(windowWidth - 50, 10);  
   
   metroImage = createImg('images/metro_icon.jpg', 'tempo');
   metroImage.size(45, 45);
-  metroImage.position(65, 30);  
+  metroImage.position(65, 10);  
+  
+  randomButton = createImg("images/random_button.jpg", "R")
+  randomButton.size(45, 45);
+  randomButton.touchStarted(randomiseEverything);
+  positionrandomButton();      
   
   scalesDropdown = createSelect();
   scalesDropdown.option('Select a Scale:', '');
@@ -491,7 +498,7 @@ function setup() {
 
   let sliderWrapper = select('.slider-wrapper');
   speedSlider = createSlider(40, 240, 100, 1);
-  speedSlider.position(65 + metroImage.width, 40);
+  speedSlider.position(65 + metroImage.width, 20);
   speedSliderPosition = 65 + metroImage.width;
   speedSlider.parent(sliderWrapper);
   speedSlider.style('width', '60px');
@@ -504,7 +511,7 @@ function setup() {
   updateSpeed();
   addButton = createImg('images/add_row.jpg', '+');
   addButton.size(45, 45);
-  addButton.position(windowWidth - 55 - addButton.width, 30);
+  addButton.position(windowWidth - 55 - addButton.width, 10);
 
   addButton.touchStarted(() => {
     if (rows < 15) {
@@ -516,7 +523,7 @@ function setup() {
 
   removeButton = createImg('images/minus_row.jpg', '-');
   removeButton.size(45, 45);
-  removeButton.position(windowWidth - 60 - removeButton.width - addButton.width, 30);
+  removeButton.position(windowWidth - 60 - removeButton.width - addButton.width, 10);
 
   removeButton.touchStarted(() => {
     if (rows > 5) {
@@ -609,7 +616,7 @@ function draw() {
     // BPM
     noStroke();
     fill(0);
-    text("♩ = " + speedSlider.value(), speedSliderPosition + speedSliderWidth * 1.2, 32);
+    text("♩ = " + speedSlider.value(), speedSliderPosition + speedSliderWidth * 1.2, 13);
 
     if (animate) {
       let elapsedTime = millis() - animationStartTime;
@@ -804,4 +811,80 @@ function updateIndividualInstrumentArray(indexToUpdate) {
       gridChanged = true;
     }
   }, 50); // debounce
+}
+
+
+function positionrandomButton() {
+  randomButton.position(windowWidth - 50, 60);
+}
+
+function randomiseEverything() {
+  randomTempo = randomInt(60, 240); // int, avoid slowest option
+  speedSlider.value(randomTempo);
+
+  // rows
+  rows = int(random(10)) + 5;
+  
+  randomScale = random(["Major Pentatonic", "Minor Pentatonic", "Major scale", "Dorian mode", "Mixolydian mode", "Aeolian mode", "Chromatic", "Harmonic Minor", "Whole Tone", "Octatonic"]);
+  scalesDropdown.selected(randomScale);
+  changeScale();  
+  
+  initializeGridArray();
+  createRandomPoints();
+  
+  // individ. instruments
+  individualInstrumentArray = [];
+  for (let i = 0; i < 37; i++) {
+  individualInstrumentArray.push(randomInt(1, 3));
+}
+  loadAudioSet(individualInstrumentArray);    
+  gridChanged = true;  
+  
+}
+
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+let sequence = []; // Array to store the sequence
+let maxDifference = 2;
+
+// create random single line melody - marginal improvement on completely random notes
+function createRandomPoints() {
+  
+  grid = [];
+  sequence = [];
+  
+  for (let i = 0; i < rows; i++) {
+    grid.push(new Array(cols).fill(false));
+  }
+  
+  let firstNumber = floor(random(1, rows)); // or rows + 1 ?
+  sequence.push(firstNumber);
+  
+  // Generate the rest of the sequence
+  for (let i = 1; i < cols; i++) {
+    let prevNumber = sequence[i - 1];
+    
+    // Calculate the next number within the allowable range
+    let nextNumber = prevNumber + floor(random(-maxDifference, maxDifference + 1));
+    
+    // Ensure the next number stays within the defined range
+    nextNumber = constrain(nextNumber, 1, rows-1);
+    
+    // Add the number to the sequence
+    sequence.push(nextNumber);
+  }  
+  
+  // Set values in the grid based on the sequence
+  for (let i = 0; i < cols; i++) {
+    // Introduce a probability to skip setting the value in the grid
+    if (random(1) < 0.1) {
+      continue; // Skip setting this item in the grid
+    }
+
+    let col = sequence[i];
+    let row = i;
+    grid[col][row] = true;
+  }
 }
